@@ -27,6 +27,7 @@ async function run() {
     const parcelManagement = client.db("parcelManagement");
     const userCollection = parcelManagement.collection("users");
     const parcelCollection = parcelManagement.collection("parcels");
+    const reviewCollection = parcelManagement.collection("reviews");
 
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -61,6 +62,11 @@ async function run() {
       const result=await parcelCollection.findOne(query)
       res.send(result)
     });
+    app.post('/reviews', async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    });
     app.patch('/updateParcel/:id', async (req,res)=>{
       const parcel=req.body;
       const id=req.params.id
@@ -89,7 +95,7 @@ async function run() {
       const filter={_id: new ObjectId(id)}
       const updateDoc={
         $set:{
-          status:'Cancelled'
+          status:'cancelled'
         }
       }
       const result= await parcelCollection.updateOne(filter,updateDoc)
@@ -117,6 +123,20 @@ async function run() {
     //   const result=await parcelCollection.updateOne(filter,updateDoc)
     //   res.send(result);
     // })
+    //mange button
+    app.put('/manageDeliverymen/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const updateParcel = req.body;
+      const food = {
+        $set: {
+          delivery_men_id: updateParcel.delivery_men_id, appr_delivery_date: updateParcel.appr_delivery_date, status:"ontheway"
+        },
+      };
+      const result = await parcelCollection.updateOne(filter, food, options)
+      res.send(result);
+    })
 
     app.get('/deliverymens', async (req, res) => {
       const query={role:"deliverymen"}
@@ -125,11 +145,18 @@ async function run() {
       // console.log(result)
     });
     app.get('/users', async (req, res) => {
+      const page=parseInt(req.query.page)
+      const size=parseInt(req.query.size)
       const query={role:"user"}
-      const result = await userCollection.find(query).toArray()
+      const result = await userCollection.find(query).skip(page * size).limit(size).toArray()
       res.send(result)
       // console.log(result)
     });
+    //pagination
+    app.get('/pageCount',async(req,res)=>{
+      const count=await userCollection.estimatedDocumentCount()
+      res.send({count})
+    })
     app.patch('/makeAddmin/:id', async (req,res)=>{
       const id=req.params.id;
       const filter={_id: new ObjectId(id)}
@@ -175,12 +202,20 @@ async function run() {
       const filter={_id: new ObjectId(id)}
       const updateDoc={
         $set:{
-          status:'Delivered'
+          status:'delivered'
         }
       }
       const result= await parcelCollection.updateOne(filter,updateDoc)
       res.send(result)
     })
+
+    app.get('/reviews/:id', async (req, res) => {
+      const id=req.params.id
+      const query={delivery_men_id : id}
+      const result = await reviewCollection.find(query).toArray()
+      res.send(result)
+      // console.log(result)
+    });
 
   
   
