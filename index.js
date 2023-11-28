@@ -95,6 +95,94 @@ async function run() {
       const result= await parcelCollection.updateOne(filter,updateDoc)
       res.send(result)
     })
+
+  
+    //admin side---------------------------------------------------------
+    app.get('/parcels', async (req, res) => {
+      const result = await parcelCollection.find().toArray()
+      res.send(result)
+      // console.log(result)
+    });
+    // app.patch('/manageDeliverymen/:id',async(req,res)=>{
+    //   const item=req.body;
+    //   const id=req.params.id;
+    //   const filter={_id: new ObjectId(id)};
+    //   const updateDoc={
+    //     $set:{
+    //       delivery_men_id: item.delivery_men_id,
+    //       appr_delivery_date: item.appr_delivery_date,
+    //       status:'ontheway'
+    //     }
+    //   }
+    //   const result=await parcelCollection.updateOne(filter,updateDoc)
+    //   res.send(result);
+    // })
+
+    app.get('/deliverymens', async (req, res) => {
+      const query={role:"deliverymen"}
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
+      // console.log(result)
+    });
+    app.get('/users', async (req, res) => {
+      const query={role:"user"}
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
+      // console.log(result)
+    });
+    app.patch('/makeAddmin/:id', async (req,res)=>{
+      const id=req.params.id;
+      const filter={_id: new ObjectId(id)}
+      const updateDoc={
+        $set:{
+          role:'admin'
+        }
+      }
+      const result= await parcelCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+    app.patch('/makeDeliveryMen/:id', async (req,res)=>{
+      const id=req.params.id;
+      const filter={_id: new ObjectId(id)}
+      const updateDoc={
+        $set:{
+          role:'deliverymen'
+        }
+      }
+      const result= await parcelCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+
+
+//delivermen Side--------------------------------------------------------------
+    app.get('/deliverymenId/:email', async (req, res) => {
+      const email=req.params.email
+      const query={email:email}
+      const result = await userCollection.findOne(query)
+      res.send(result)
+      // console.log(result)
+    });
+
+    app.get('/deliverylist/:id', async (req, res) => {
+      const id=req.params.id
+      const query={delivery_men_id : id}
+      const result = await parcelCollection.find(query).toArray()
+      res.send(result)
+      // console.log(result)
+    });
+    app.patch('/parcelsDelivery/:id', async (req,res)=>{
+      const id=req.params.id;
+      const filter={_id: new ObjectId(id)}
+      const updateDoc={
+        $set:{
+          status:'Delivered'
+        }
+      }
+      const result= await parcelCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+
+  
   
    
 
