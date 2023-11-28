@@ -101,6 +101,27 @@ async function run() {
       const result= await parcelCollection.updateOne(filter,updateDoc)
       res.send(result)
     })
+    //user profile change
+    app.get('/userId/:email', async (req, res) => {
+      const email=req.params.email
+      const query={email : email}
+      const result = await parcelCollection.findOne(query).
+      res.send(result)
+      // console.log(result)
+    });
+    app.patch('/userimg/:id', async (req,res)=>{
+      const item=req.image
+      const id=req.params.id;
+      const filter={_id: new ObjectId(id)}
+      const updateDoc={
+        $set:{
+          image:item.image
+        }
+      }
+      const result= await parcelCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
+
 
   
     //admin side---------------------------------------------------------
