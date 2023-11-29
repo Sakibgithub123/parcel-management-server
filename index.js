@@ -34,6 +34,13 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result)
     });
+    //feture auto count
+    app.get('/featureCount',async (req,res)=>{
+      const totalBooked=await parcelCollection.estimatedDocumentCount();
+      const totalUser=await userCollection.estimatedDocumentCount();
+      const totalDeliverey=await parcelCollection.estimatedDocumentCount({status:'delivered'})
+      res.send({totalBooked,totalUser,totalDeliverey})
+    })
     app.post('/bookParcel', async (req, res) => {
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel);
@@ -102,14 +109,16 @@ async function run() {
       res.send(result)
     })
     //user profile change
-    app.get('/userId/:email', async (req, res) => {
+   
+    app.get('/users/:email', async (req, res) => {
       const email=req.params.email
       const query={email : email}
-      const result = await parcelCollection.findOne(query).
+      const result = await userCollection.findOne(query)
       res.send(result)
+     
       // console.log(result)
     });
-    app.patch('/userimg/:id', async (req,res)=>{
+    app.patch('/users/:id', async (req,res)=>{
       const item=req.image
       const id=req.params.id;
       const filter={_id: new ObjectId(id)}
@@ -118,13 +127,31 @@ async function run() {
           image:item.image
         }
       }
-      const result= await parcelCollection.updateOne(filter,updateDoc)
+      const result= await userCollection.updateOne(filter,updateDoc)
       res.send(result)
     })
 
 
   
     //admin side---------------------------------------------------------
+    app.get('/admin-stats',async (req,res)=>{
+      const user=await userCollection.estimatedDocumentCount()
+      const deliverymen=await userCollection.estimatedDocumentCount({role:'deliverymen'})
+      const bookedParcel=await parcelCollection.estimatedDocumentCount()
+      const result=await parcelCollection.aggregate([
+        {
+          $group:{
+            _id:null,
+            totalRevenue:{
+              $sum:'$price'
+            }
+          }
+        }
+      ]).toArray();
+      const totalRevenue=result.length > 0?result[0].totalRevenue : 0;
+      res.send({user,deliverymen,bookedParcel,totalRevenue})
+    })
+   
     app.get('/parcels', async (req, res) => {
       const result = await parcelCollection.find().toArray()
       res.send(result)
@@ -161,18 +188,115 @@ async function run() {
 
     app.get('/deliverymens', async (req, res) => {
       const query={role:"deliverymen"}
-      const result = await userCollection.find(query).toArray()
+      const result = await userCollection.aggregate([
+        {
+          $lookup:{
+            from:'reviews',
+            localField:'_id',
+            foreignField:'delivery_men_id',
+            as:'userdata'
+          }
+        },
+        {
+          $unwind:'$userdata'
+
+        },{
+          $group:{
+            _id:'$_id',
+            // totalBooked:{$sum:1},
+            total_delivered:{
+              $sum:'$query'
+            },
+          
+            total_rating:{
+              $avg:'$rating'
+            },
+            name:{$first:'$userdata.name'},
+            phone:{$first:'$userdata.phone'},
+            role:{$first:'$userdata.role'},
+          }
+        },
+       
+        
+      ]).toArray()
       res.send(result)
       // console.log(result)
     });
-    app.get('/users', async (req, res) => {
+    // app.get('/users', async (req, res) => {
+    //   const page=parseInt(req.query.page)
+    //   const size=parseInt(req.query.size)
+    //   const query={role:"user"}
+    //   const result = await userCollection.find(query).skip(page * size).limit(size).toArray()
+    //   res.send(result)
+    //   // console.log(result)
+    // });
+    //aggregate
+    app.get('/users',async (req,res)=>{
       const page=parseInt(req.query.page)
       const size=parseInt(req.query.size)
-      const query={role:"user"}
-      const result = await userCollection.find(query).skip(page * size).limit(size).toArray()
+      const skip=page * size;
+      const result=await parcelCollection.aggregate([
+       
+        {
+          $lookup:{
+            from:'users',
+            localField:'email',
+            foreignField:'email',
+            as:'userdata'
+          }
+        },
+        {
+          $unwind:'$userdata'
+
+        },{
+          $group:{
+            _id:'$_id',
+            totalBooked:{$sum:1},
+          
+            totalPrice:{
+              $sum:'$price'
+            },
+            name:{$first:'$userdata.name'},
+            phone:{$first:'$userdata.phone'},
+            role:{$first:'$userdata.role'},
+          }
+        },
+        {
+          $skip: skip
+        },
+        {
+          $limit:size
+        }
+        
+      ]).toArray()
       res.send(result)
-      // console.log(result)
-    });
+
+    })
+    app.get('/admin-chart',async (req,res)=>{
+      const barChart= await parcelCollection.aggregate([
+        {
+          $group:{
+            _id:'$booking_date',
+            count:{
+              $sum:1
+            }
+          }
+        },
+        {
+          $sort:{ _id: 1}
+
+        },
+        {
+          $project:{
+            booking_date:'$_id',
+            totalBooking:'$count'
+
+          }
+        }
+      ]).toArray()
+      res.send(barChart)
+    })
+   
     //pagination
     app.get('/pageCount',async(req,res)=>{
       const count=await userCollection.estimatedDocumentCount()
