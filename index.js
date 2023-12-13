@@ -30,6 +30,7 @@ async function run() {
     const userCollection = parcelManagement.collection("users");
     const parcelCollection = parcelManagement.collection("parcels");
     const reviewCollection = parcelManagement.collection("reviews");
+    const branchCollection = parcelManagement.collection("branches");
     const paymentCollection = parcelManagement.collection("payment");
     
 //--------------------users--------------------------
@@ -349,6 +350,22 @@ async function run() {
       const result= await parcelCollection.updateOne(filter,updateDoc)
       res.send(result)
     })
+
+    app.post('/branch', async (req, res) => {
+      const branch = req.body;
+      const result = await branchCollection.insertOne(branch);
+      res.send(result);
+    });
+    app.get('/branch', async (req, res) => {
+      const result = await branchCollection.find().toArray();
+      res.send(result);
+    });
+    app.delete('/branch/:id', async (req, res) => {
+      const id=req.params.id
+      const query={_id: new ObjectId(id)}
+      const result = await branchCollection.deleteOne(query);
+      res.send(result);
+    });
 
 
 
